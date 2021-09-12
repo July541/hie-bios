@@ -42,7 +42,7 @@ import Control.Monad
 import System.Info.Extra
 import Control.Monad.IO.Class
 import System.Environment
-import Control.Applicative ((<|>), optional)
+import Control.Applicative ((<|>), optional, empty)
 import System.IO.Temp
 import System.IO.Error (isPermissionError)
 import Data.List
@@ -112,6 +112,11 @@ getCradle buildCustomCradle (cc, wdir) = addCradleDeps cradleDeps $ case cradleT
         (CradleConfig cradleDeps
           (Multi [(p, CradleConfig [] (Stack $ ds <> c)) | (p, c) <- ms])
         , wdir)
+    StackGlobal StackType{ stackComponent = mc, stackYaml = syaml } ->
+      let
+        stackYamlConfig = stackYamlFromMaybe wdir syaml
+      in
+        stackCradle wdir mc stackYamlConfig
  --   Bazel -> rulesHaskellCradle wdir
  --   Obelisk -> obeliskCradle wdir
     Bios bios deps mbGhc -> biosCradle wdir bios deps mbGhc
@@ -148,6 +153,7 @@ inferCradleType fp =
        maybeItsBios
    <|> maybeItsStack
    <|> maybeItsCabal
+   <|> maybeItsStackGlobal
 -- <|> maybeItsObelisk
 -- <|> maybeItsObelisk
 
@@ -157,6 +163,10 @@ inferCradleType fp =
   maybeItsStack = stackExecutable >> (Stack $ StackType Nothing Nothing,) <$> stackWorkDir fp
 
   maybeItsCabal = (Cabal $ CabalType Nothing,) <$> cabalWorkDir fp
+
+  maybeItsStackGlobal = liftIO (findExecutable "ghc") >>= \case
+    Just _ -> empty
+    Nothing -> pure (StackGlobal $ StackType Nothing Nothing, takeDirectory fp)
 
   -- maybeItsObelisk = (Obelisk,) <$> obeliskWorkDir fp
 
@@ -702,6 +712,8 @@ stackWorkDir :: FilePath -> MaybeT IO FilePath
 stackWorkDir = findFileUpwards isStack
   where
     isStack name = name == "stack.yaml"
+
+stackGlobalConfig = undefined
 
 {-
 -- Support removed for 0.3 but should be added back in the future

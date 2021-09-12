@@ -97,6 +97,7 @@ data CradleType a
     | CabalMulti { defaultCabal :: !CabalType, subCabalComponents :: [ (FilePath, CabalType) ] }
     | Stack { stackType :: !StackType }
     | StackMulti { defaultStack :: !StackType, subStackComponents :: [ (FilePath, StackType) ] }
+    | StackGlobal { stackType :: !StackType }
 --  Bazel and Obelisk used to be supported but bit-rotted and no users have complained.
 --  They can be added back if a user
 --    | Bazel
